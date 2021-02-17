@@ -20,14 +20,10 @@
 #include "uio_common.h"
 #include <unistd.h>
 
-
-#define DEFAULT_METRIC			(0x0)
-#define DEFAULT_QOSVAL			(0x0)
-#define DEFAULT_PORTNUM			(0x0)
-
-u32 metric = DEFAULT_METRIC;
-u32 qos_val = DEFAULT_QOSVAL;
-u32 port_num = DEFAULT_PORTNUM;
+int set_qos = -1;
+int qos_type = -1;
+int port_num = -1;
+u32 qos_val = 0xf;
 
 static uint32_t getopt_integer(char *optarg)
 {
@@ -40,16 +36,18 @@ static uint32_t getopt_integer(char *optarg)
 }
 
 static struct option const long_opts[] = {
-	{"metric [0-1]\n 0: set_qos \n 1: get_qos\n", required_argument, NULL, 'm'},
-	{"port no[0-6]\n 0-PORT0\n 1-PORT1R\n"
-			" 2-PORT2R\n 3-PORT3\n 4-PORT4\n 5-PORT5\n"
-			" 6-All ports\n", required_argument, NULL, 'p'},
-	{"QoS value range[0x0-0x2]\n 0: BEST EFFORT\n"
-			" 1: VIDEO CLASS\n 2: LOW LATENCY\n",
-							 required_argument, NULL, 'v'},
+	{"set qos value :range[0-0x2] \n",
+		required_argument, NULL, 's'},
+	{"get qos value for the given port \n",
+		required_argument, NULL, 'g'},
+	{"port no[0-6]\n 0-port0\n 1-port1r\n"
+			" 2-port2r\n 3-port3\n 4-port4\n 5-port5\n"
+			" 6-all ports\n", required_argument, NULL, 'p'},
+	{"version\n", required_argument, NULL, 'v'},
 	{"help\n", no_argument, NULL, 'h'},
 	{0, 0, 0, 0}
 };
+
 static int XDDRQos_rd_wr_qos(u32 metric, u32 port_num, u32 qos_val);
 
 static void usage(const char *name)
@@ -57,13 +55,16 @@ static void usage(const char *name)
 	int i = 0;
 
 	fprintf(stdout, "%s\n\n", name);
+	fprintf(stdout, "Xilinx copyright 2021\n\n");
+	fprintf(stdout, "This application is to set QOS value for"
+					"DDR slots\n on zynqmp platform\n\n");
 	fprintf(stdout, "usage: %s [OPTIONS]\n\n", name);
+	fprintf(stdout, "%s -s <val> -t <qos type> -p <port num> \n\n", name);
+	fprintf(stdout, "%s -g -t <qos type> -p <port num> \n\n", name);
 
 	for (i=0 ; i<(sizeof(long_opts)/sizeof(long_opts[0])) - 2; i++)
 		fprintf(stdout, "-%c represents %s\n",
 			long_opts[i].val, long_opts[i].name);
-	fprintf(stdout, "-%c (%s) print usage help and exit\n",
-		long_opts[i].val, long_opts[i].name);
 	i++;
 }
 
@@ -71,54 +72,66 @@ int main(int argc, char *argv[])
 {
 	int cmd_opt;
 
+	if (argc == 1) {
+		usage(argv[0]);
+		return 0;
+	}
+
 	while ((cmd_opt =
-		getopt_long(argc, argv, "hc:m:p:v:", long_opts,
+		getopt_long(argc, argv, "hgvc:s:p:", long_opts,
 			    NULL)) != -1) {
 		switch (cmd_opt) {
 		case 0:
 			/* long option */
 			break;
-		case 'm':
-			metric = getopt_integer(optarg);
-			if (metric < 0 || metric > 0x1) {
-				metric = DEFAULT_METRIC;
-				printf("-m: Invalid selection: select\n 0: get_qos\n 1: set_qos\n"
-					 "setting to default value %d\n\n", metric);
+
+		case 's':
+			set_qos = 1;
+			qos_val	= getopt_integer(optarg);
+			if (qos_val < 0 || qos_val > 0x2) {
+				printf("-s is to set qos value for the DDR ports\n"
+						"select in the range of [0-0x2] \n");
+				return 0;
 			}
+			break;
+
+		case 'g':
+			set_qos = 0;
 			break;
 
 		case 'p':
 			port_num = getopt_integer(optarg);
 			if (port_num < 0 || port_num > 0x6) {
-				port_num = DEFAULT_PORTNUM;
 				printf("-p: Invalid port number: select below option:\n 0-PORT0 \n 1-PORT1R \n"
 					" 2-PORT2R \n 3-PORT3 \n 4-PORT4 \n 5-PORT5 \n 6-All ports\n"
 					" setting to default value %x\n\n", port_num);
+				return 0;
 			}
 			break;
 
 		case 'v':
-			qos_val	= getopt_integer(optarg);
-			if (qos_val < 0 || qos_val > 0x2) {
-				qos_val = DEFAULT_QOSVAL;
-				printf("-v Invalid QOS value: range [0-0x2]\n"
-					" 0-BEST_EFFORT\n 1-VIDEO_CLASS\n 2-LOW_LATENCY\n "
-					"setting to default value %d\n\n", qos_val);
-			}
+			printf("Xilinx zynqmp ddr qos app version 0.1 \n");
+			return 0;
 			break;
 
 		case 'h':
-		default:
 			usage(argv[0]);
 			return 0;
 			break;
+		default:
+			printf("Invalid option. type -h for help \n");
+			return 0;
 		}
 	}
-	if (cmd_opt == 0) {
-		usage(argv[0]);
+	if (set_qos < 0 || port_num < 0) {
+		printf("Invalid input, type -h for help\n");
+		printf("Usage: \n");
+		printf("%s -s <val> -p <port num> \n\n", argv[0]);
+		printf("%s -g -p <port num> \n\n", argv[0]);
 		return 0;
 	}
-	return XDDRQos_rd_wr_qos(metric, port_num, qos_val);
+
+	return XDDRQos_rd_wr_qos(set_qos, port_num, qos_val);
 }
 
 static int XDDRQos_rd_wr_qos(u32 metric, u32 port_num, u32 qos_val) {
