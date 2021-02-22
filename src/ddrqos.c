@@ -59,8 +59,8 @@ static void usage(const char *name)
 	fprintf(stdout, "This application is to set QOS value for"
 					"DDR slots\n on zynqmp platform\n\n");
 	fprintf(stdout, "usage: %s [OPTIONS]\n\n", name);
-	fprintf(stdout, "%s -s <val> -t <qos type> -p <port num> \n\n", name);
-	fprintf(stdout, "%s -g -t <qos type> -p <port num> \n\n", name);
+	fprintf(stdout, "%s -s <val> -p <port num> \n\n", name);
+	fprintf(stdout, "%s -g -p <port num> \n\n", name);
 
 	for (i=0 ; i<(sizeof(long_opts)/sizeof(long_opts[0])) - 2; i++)
 		fprintf(stdout, "-%c represents %s\n",
