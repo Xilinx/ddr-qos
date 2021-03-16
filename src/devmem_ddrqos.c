@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-#include <assert.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <uio_common.h>
-#include <uio_ddrqos.h>
-
-static uio_info uQosInfo;
+#include <devmem_ddrqos.h>
 
 u32 port_info[] = { DDR_QOS_PORT_TYPE_PORT0_TYPE_SHIFT,
 					DDR_QOS_PORT_TYPE_PORT1R_TYPE_SHIFT,
@@ -30,22 +24,30 @@ u32 port_info[] = { DDR_QOS_PORT_TYPE_PORT0_TYPE_SHIFT,
 					DDR_QOS_PORT_TYPE_PORT5_TYPE_SHIFT
 					};
 
-int XDDRQos_SetQos(const uio_handle *InstancePtr, u32 Port, u32 Val) {
+int XDDRQos_SetQos(const mem_info *InstancePtr, u32 Port, u32 Val) {
 	u32 Reg_Value;
 	u32 New_Val;
+
+	if (InstancePtr == NULL) {
+        printf("%s Null instance pointer passed\n", __func__);
+        return FAIL;
+    }
+
+    if (InstancePtr->IsReady != XIL_COMPONENT_IS_READY) {
+        printf("Instance mapping not ready");
+        return FAIL;
+    }
 
 	/*
 	 * Assert the arguments.
 	 */
 	if ((Val <  DDR_QOS_TYPE_BEST_EFFORT || Val > DDR_QOS_TYPE_VIDEO_CLASS) ||
 					(Port < PORT0 || Port > PORT_MAX)) {
-		return -XST_FAILURE;
+		return -FAIL;
 	}
 
-	Xil_AssertVoid(InstancePtr != NULL);
-	Xil_AssertVoid(InstancePtr->IsReady == XIL_COMPONENT_IS_READY);
-
-	Reg_Value = XDDRQos_ReadReg(InstancePtr->Control_bus_BaseAddress, DDR_QOS_PORT_TYPE_OFFSET);
+	Reg_Value = XDDRQos_ReadReg(InstancePtr->Control_bus_BaseAddress,
+											DDR_QOS_PORT_TYPE_OFFSET);
 	/*
 	 * Set Qos Value
 	 */
@@ -59,28 +61,28 @@ int XDDRQos_SetQos(const uio_handle *InstancePtr, u32 Port, u32 Val) {
 				  Val << DDR_QOS_PORT_TYPE_PORT0_TYPE_SHIFT) ;
 	} else {
 		switch (Port) {
-		case 0:
+		case PORT0:
 			New_Val = ((Reg_Value  & ~DDR_QOS_PORT_TYPE_PORT0_TYPE_MASK) |
 					(Val << DDR_QOS_PORT_TYPE_PORT0_TYPE_SHIFT));
 			break;
 
-		case 1:
+		case PORT1R:
 			New_Val = ((Reg_Value  & ~DDR_QOS_PORT_TYPE_PORT1R_TYPE_MASK) |
                     (Val << DDR_QOS_PORT_TYPE_PORT1R_TYPE_SHIFT));
 			break;
-		case 2:
+		case PORT2R:
 			New_Val = ((Reg_Value  & ~DDR_QOS_PORT_TYPE_PORT2R_TYPE_MASK) |
                     (Val << DDR_QOS_PORT_TYPE_PORT2R_TYPE_SHIFT));
 			break;
-		case 3:
+		case PORT3:
 			New_Val = ((Reg_Value  & ~DDR_QOS_PORT_TYPE_PORT3_TYPE_MASK) |
                     (Val << DDR_QOS_PORT_TYPE_PORT3_TYPE_SHIFT));
 			break;
-		case 4:
+		case PORT4:
 			New_Val = ((Reg_Value  & ~DDR_QOS_PORT_TYPE_PORT4_TYPE_MASK) |
                     (Val << DDR_QOS_PORT_TYPE_PORT4_TYPE_SHIFT));
 			break;
-		case 5:
+		case PORT5:
 			New_Val = ((Reg_Value  & ~DDR_QOS_PORT_TYPE_PORT5_TYPE_MASK) |
                     (Val << DDR_QOS_PORT_TYPE_PORT5_TYPE_SHIFT));
 			break;
@@ -91,23 +93,30 @@ int XDDRQos_SetQos(const uio_handle *InstancePtr, u32 Port, u32 Val) {
 	}
 	XDDRQos_WriteReg(InstancePtr->Control_bus_BaseAddress, DDR_QOS_PORT_TYPE_OFFSET, New_Val);
 	printf("DDR QoS is successfully  set for port %x\n", Port);
-	return XST_SUCCESS;
+	return SUCCESS;
 }
 
-int XDDRQos_GetQos(const uio_handle *InstancePtr, u32 Port) {
+int XDDRQos_GetQos(const mem_info *InstancePtr, u32 Port) {
 	u32 Reg_Value;
 	u32 Val;
 	int i;
+
+	if (InstancePtr == NULL) {
+        printf("%s Null instance pointer passed\n", __func__);
+        return FAIL;
+    }
+
+    if (InstancePtr->IsReady != XIL_COMPONENT_IS_READY) {
+        printf("Instance mapping not ready");
+        return FAIL;
+    }
 
 	/*
 	 * Assert the arguments.
 	 */
 	if (Port < PORT0 || Port > PORT_MAX) {
-		return -XST_FAILURE;
+		return FAIL;
 	}
-
-	Xil_AssertVoid(InstancePtr != NULL);
-	Xil_AssertVoid(InstancePtr->IsReady == XIL_COMPONENT_IS_READY);
 
 	Reg_Value = XDDRQos_ReadReg(InstancePtr->Control_bus_BaseAddress,
             DDR_QOS_PORT_TYPE_OFFSET);
@@ -116,68 +125,76 @@ int XDDRQos_GetQos(const uio_handle *InstancePtr, u32 Port) {
 	 */
 	if (Port == PORT_MAX) {
 		for (i = 0; i < PORT_MAX; i++) {
-			Val = ( Reg_Value >> port_info[i]) & 0x3;
+			Val = ( Reg_Value >> port_info[i]) & DDR_QOS_MASK;
 			printf("DDR QoS for Port number %x is %x\n", i, Val);
 		}
 	} else {
 		switch (Port) {
-		case 0:
-			Val = (Reg_Value >> DDR_QOS_PORT_TYPE_PORT0_TYPE_SHIFT) & 0x3;
-			printf("DDR QoS for Port number %x is %x\n", Port, Val);
+		case PORT0:
+			Val = (Reg_Value >> DDR_QOS_PORT_TYPE_PORT0_TYPE_SHIFT) &
+																DDR_QOS_MASK;
 			break;
-		case 1:
-			Val = (Reg_Value >> DDR_QOS_PORT_TYPE_PORT1R_TYPE_SHIFT) & 0x3;
-			printf("DDR QoS for Port number %x is %x\n", Port, Val);
+		case PORT1R:
+			Val = (Reg_Value >> DDR_QOS_PORT_TYPE_PORT1R_TYPE_SHIFT) &
+																DDR_QOS_MASK;
 			break;
-		case 2:
-			Val = (Reg_Value >> DDR_QOS_PORT_TYPE_PORT2R_TYPE_SHIFT) & 0x3;
-			printf("DDR QoS for Port number %x is %x\n", Port, Val);
+		case PORT2R:
+			Val = (Reg_Value >> DDR_QOS_PORT_TYPE_PORT2R_TYPE_SHIFT) &
+																DDR_QOS_MASK;
 			break;
-		case 3:
-			Val = (Reg_Value >> DDR_QOS_PORT_TYPE_PORT3_TYPE_SHIFT) & 0x3;
-			printf("DDR QoS for Port number %x is %x\n", Port, Val);
+		case PORT3:
+			Val = (Reg_Value >> DDR_QOS_PORT_TYPE_PORT3_TYPE_SHIFT) &
+																DDR_QOS_MASK;
 			break;
-		case 4:
-			Val = (Reg_Value >> DDR_QOS_PORT_TYPE_PORT4_TYPE_SHIFT) & 0x3;
-			printf("DDR QoS for Port number %x is %x\n", Port, Val);
+		case PORT4:
+			Val = (Reg_Value >> DDR_QOS_PORT_TYPE_PORT4_TYPE_SHIFT) &
+																DDR_QOS_MASK;
 			break;
-		case 5:
-			Val = (Reg_Value >> DDR_QOS_PORT_TYPE_PORT5_TYPE_SHIFT) & 0x3;
-			printf("DDR QoS for Port number %x is %x\n", Port, Val);
+		case PORT5:
+			Val = (Reg_Value >> DDR_QOS_PORT_TYPE_PORT5_TYPE_SHIFT) &
+																DDR_QOS_MASK;
 			break;
 		default:
 			printf("Invalid port no selection %x\n", Port);
 
 		}
+		printf("DDR QoS for Port number %x is %x\n", Port, Val);
 	}
-	return XST_SUCCESS;
+	return SUCCESS;
 }
 
-int uDDRQos_Init(uio_handle *qos_handle) {
+int uDDRQos_Init(mem_info *mem_handle) {
 
-	int ret = uio_Initialize(&uQosInfo, DDRQOS_INSTANCE_NAME);
-	if (ret == XST_DEVICE_NOT_FOUND)
-		return ret;
+	mem_handle->memfd = open("/dev/mem", O_RDWR | O_SYNC);
+	if (mem_handle->memfd == -1) {
+		printf("Can't open /dev/mem.\n");
+		return FAIL;
+	}
 
-	assert(uQosInfo.isInitialized == XIL_COMPONENT_IS_READY);
-	ret = uio_get_Handler(&uQosInfo, qos_handle, MAP_CNT);
-	if (ret != XST_SUCCESS)
-		return ret;
-	assert(qos_handle->IsReady == XIL_COMPONENT_IS_READY);
-	return ret;
+	mem_handle->Control_bus_BaseAddress = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE,
+							MAP_SHARED, mem_handle->memfd, DDR_QOS_CTRL_BASE & ~MAP_MASK);
+	if (mem_handle->Control_bus_BaseAddress == (void *) -1) {
+		close(mem_handle->memfd);
+		printf("Can't map the memory to user space.\n");
+		return FAIL;
+	}
+	mem_handle->IsReady = XIL_COMPONENT_IS_READY;
+	return SUCCESS;
 }
 
-int uDDRQos_DeInit(uio_handle *qos_handle) {
+int uDDRQos_DeInit(mem_info *mem_handle) {
 
-	int ret;
+	if (mem_handle->IsReady)
+	{
+		if (munmap(mem_handle->Control_bus_BaseAddress, MAP_SIZE) == -1) {
+			 printf("Can't unmap memory from user space.\n");
+			 return FAIL;
+		}
 
-	assert(qos_handle->IsReady == XIL_COMPONENT_IS_READY);
-	ret = uio_release_handle(&uQosInfo, qos_handle, MAP_CNT);
-	if (ret != XST_SUCCESS)
-		return ret;
-	ret = uio_Release(&uQosInfo);
-	if (ret != XST_SUCCESS)
-			return ret;
+		close(mem_handle->memfd);
+		mem_handle->Control_bus_BaseAddress = NULL;
+		mem_handle->IsReady = XIL_COMPONENT_NOT_READY;
+	}
 
-	return ret;
+	return SUCCESS;
 }

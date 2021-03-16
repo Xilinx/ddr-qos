@@ -14,18 +14,26 @@
  * limitations under the License.
  */
 
-#ifndef UAXI_QOS_H_
-#define UAXI_QOS_H_
+#ifndef DDR_QOS_H_
+#define DDR_QOS_H_
 
-#include "uio_common.h"
+#include <assert.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stddef.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <stdlib.h>
+#include <stdint.h>
 
 #define DDRQOS_INSTANCE_NAME	"ddr_qos"
 #define MAP_CNT             0x1
 
 #define DDR_QOS_PORT_TYPE_OFFSET	0x00
 
-#define EXIT_SUCCESS	0
-#define EXIT_FAIL		1
+#define SUCCESS		0
+#define FAIL		-1
 
 #define DDR_QOS_TYPE_BEST_EFFORT  0x0
 #define DDR_QOS_TYPE_LOW_LATENCY  0x1
@@ -47,9 +55,38 @@
 #define DDR_QOS_PORT_TYPE_PORT5_TYPE_MASK	0xC000
 #define DDR_QOS_PORT_TYPE_PORT_FULL_MASK	0xFFFF
 
+#define DDR_QOS_MASK		0x3
 
-#define XDDRQos_ReadReg 	HW_READ
-#define XDDRQos_WriteReg 	HW_WRITE
+#define SUCCESS     0
+#define FAIL        -1
+
+#define XIL_COMPONENT_IS_READY  1
+#define XIL_COMPONENT_NOT_READY 0
+
+#define DDR_QOS_CTRL_BASE		0xFD090000
+#define MAP_SIZE 4096UL
+#define MAP_MASK (MAP_SIZE - 1)
+
+#define XDDRQos_ReadReg(addr,off)   *((volatile uint32_t *) ( ((uint8_t*)addr) + off ))
+#define XDDRQos_WriteReg(addr, off, val)    *((volatile uint32_t *) ( ((uint8_t*)addr)+ off )) = (val)
+
+/**************************** Type Definitions ******************************/
+typedef unsigned int u32;
+typedef unsigned char u8;
+typedef unsigned short int u16;
+
+typedef struct {
+    int IsReady;
+    int memfd;
+    void *Control_bus_BaseAddress;
+} mem_info;
+
+enum Qos_Type {
+    RD_QOS = 1,
+    WR_QOS,
+    RD_ISSUE,
+    WR_ISSUE,
+};
 
 
 enum DDRQos_PORT {
@@ -62,8 +99,8 @@ enum DDRQos_PORT {
 	PORT_MAX,
 };
 
-int uDDRQos_Init(uio_handle *qos_handle);
-int uDDRQos_DeInit(uio_handle *qos_handle);
-int XDDRQos_SetQos(const uio_handle *InstancePtr, u32 Port, u32 Val);
-int XDDRQos_GetQos(const uio_handle *InstancePtr, u32 Port);
-#endif /* UAFIFM_QOS_H_ */
+int uDDRQos_Init(mem_info *qos_handle);
+int uDDRQos_DeInit(mem_info *qos_handle);
+int XDDRQos_SetQos(const mem_info *InstancePtr, u32 Port, u32 Val);
+int XDDRQos_GetQos(const mem_info *InstancePtr, u32 Port);
+#endif /* DDR_QOS_H_ */

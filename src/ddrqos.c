@@ -16,19 +16,18 @@
 
 #include <getopt.h>
 #include <stdio.h>
-#include <uio_ddrqos.h>
-#include "uio_common.h"
 #include <unistd.h>
+#include <devmem_ddrqos.h>
 
 int set_qos = -1;
 int qos_type = -1;
 int port_num = -1;
 u32 qos_val = 0xf;
 
-static uint32_t getopt_integer(char *optarg)
+static u32 getopt_integer(char *optarg)
 {
   int rc;
-  uint32_t value;
+  u32 value;
   rc = sscanf(optarg, "0x%x", &value);
   if (rc <= 0)
     rc = sscanf(optarg, "%ul", &value);
@@ -54,7 +53,6 @@ static void usage(const char *name)
 {
 	int i = 0;
 
-	fprintf(stdout, "%s\n\n", name);
 	fprintf(stdout, "Xilinx copyright 2021\n\n");
 	fprintf(stdout, "This application is to set QOS value for"
 					"DDR slots\n on zynqmp platform\n\n");
@@ -134,19 +132,20 @@ int main(int argc, char *argv[])
 	return XDDRQos_rd_wr_qos(set_qos, port_num, qos_val);
 }
 
+
 static int XDDRQos_rd_wr_qos(u32 metric, u32 port_num, u32 qos_val) {
-	uio_handle qos_handle;
+	mem_info mem_handle;
 	int ret;
 
-	ret = uDDRQos_Init(&qos_handle);
+	ret = uDDRQos_Init(&mem_handle);
 	if (ret > 0)
 		return ret;
 
 	if (metric)
-		XDDRQos_SetQos(&qos_handle, port_num, qos_val);
+		XDDRQos_SetQos(&mem_handle, port_num, qos_val);
 	else
-		XDDRQos_GetQos(&qos_handle, port_num);
+		XDDRQos_GetQos(&mem_handle, port_num);
 
-	return uDDRQos_DeInit(&qos_handle);
+	return uDDRQos_DeInit(&mem_handle);
 }
 
