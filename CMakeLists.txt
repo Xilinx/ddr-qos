@@ -25,7 +25,7 @@ set(CMAKE_C_STANDARD 99)
 
 include_directories(include)
 file(GLOB SOURCES "src/*.c")
-SET(INSTALL_PATH "usr/bin")
+SET(INSTALL_PATH "bin")
 
 #set(EXECUTABLE_OUTPUT_PATH  ${PROJECT_SOURCE_DIR})
 # Declare the executable target built from your sources
@@ -45,4 +45,3 @@ set(CPACK_PACKAGING_INSTALL_PREFIX "/")
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}")
 set(CPACK_RPM_SPEC_MORE_DEFINE "%define _build_id_links none")
 include(CPack)
-
